@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Query Transform from Code to SQL Workbench</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="clipboard.min.js"></script>
+
+    <link rel="stylesheet" href="bulma.min.css">
+</head>
+
+<body>
+    <br>
+    <div class="is-centered">
+        <h2 class="title">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; SQL Code String to SQL Query Converter (with variable
+            values)</h2>
+    </div>
+    <br>
+    <div class="columns is-centered">
+        <div class="column is-half">
+            <textarea class="textarea" placeholder="Paste your SQL query from code here" name="sqlserver" id="sqltextarea"
+                cols="30" rows="5"></textarea>
+            <br>
+            <span>
+                <button class="button is-link" id="btnAnalyze">Analyze SQL</button>
+                <button class="button is-danger" id="btnClear">Clear SQL</button>
+            </span>
+
+            <br>
+            <p id="variable-title">Variables</p>
+            <div>
+                <ul id="variableContainer"></ul>
+                <!-- <li><span>Variable = </span> <input type="text" name="variable" id="var0"></li> -->
+            </div>
+            <button id="btnConvert" class="button is-success">Convert SQL</button>
+
+            <br>
+
+            <div style="position: relative;">
+                    <h1 class="title">Output</h1>
+            <textarea class="textarea" name="sqlserver" id="sqlOutput" cols="30" rows="5"></textarea>
+            <button style="position: absolute; right: 2px; top: 2px;" id="copyBtn" data-clipboard-target="#sqlOutput" class="button is-info">Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        new ClipboardJS('#copyBtn');
+        $('#copyBtn').on('click', function () {
+            $('#copyBtn').text("copied!!");
+        });
+
+        
+        $('#btnClear').on('click', function () {
+            location.reload();
+        });
+        
+        var variables = [];
+        let trimVars = [];
+
+        $('#btnAnalyze').on('click', function () {
+            let sqlString = $('#sqltextarea').val();
+
+            // Extract Variables. Between + variable +
+            let varExtractRegex = /(?<=\+)([\w\s]*)(?=\+)/gmi;
+            var match;
+
+            while (match = varExtractRegex.exec(sqlString)) {
+                variables.push(match[0]);
+            }
+
+            for (let i = 0; i < variables.length; i++) {
+                let trimVar = variables[i].trim();
+                if (!contains(trimVars, trimVar)) {
+                    trimVars.push(variables[i].trim());
+                }
+            }
+
+            console.log("trimVars = " + trimVars);
+
+            // generate variable table
+            for (let i = 0; i < trimVars.length; i++) {
+                const temp = trimVars[i];
+
+                let htmlStr = '<li><span>' + temp +
+                    ' =  <input style="width: 30%;" class="input" type="text" name="variable" id="var' + i +
+                    '"> </span></li>';
+                $('#variableContainer').append(htmlStr);
+            }
+
+
+            let output = sqlString.replace(/\\n/gm, ""); // \n is replaced
+
+            var patt = /["\+]/gmi; // either " or + is replaced
+            output = output.replace(patt, '')
+            console.log('convert query ' + $('#sqltextarea').val());
+
+            console.log("output = " + output);
+        });
+
+        $('#btnConvert').on('click', function () {
+            let sqlString = $('#sqltextarea').val();
+
+            // 1. remove all + at starting of query lines
+            sqlString = sqlString.replace(/^\s*\+/gmi, "    ");
+
+            console.log('step 1 + removed = ' + sqlString);
+
+            // replace all variables todo : only replace variable inside between + +
+            for (let i = 0; i < variables.length; i++) {
+                var regx = new RegExp('\\+\\s*' + trimVars[i] + '\\s*\\+', 'gmi');
+                sqlString = sqlString.replace(regx, $('#var' + i).val());
+            }
+
+            console.log('step 2 variables removed = ' + sqlString);
+
+            // \n is replaced
+            let output = sqlString.replace(/\\n/gm, "");
+
+            // both " and + is replaced
+            var patt = /["\+]/gmi;
+            output = output.replace(patt, '');
+
+            // problem - spaces between single quotes!!
+            var quoteRegx = /(["'])(?:(?=(\\?))\2.)*?\1/gi;
+            var match;
+            var quoteStr;
+            while (match = quoteRegx.exec(output)) {
+                var fullMatch = match[0];
+                console.log('fullMatch = ' + fullMatch);
+                let trimmed = fullMatch.replace(/\s*/g, ''); // remove spaces;
+                console.log('trimmed = ' + trimmed);
+                output = output.replace(fullMatch, trimmed);
+                console.log('sqlString = ' + output);
+            }
+
+            $('#sqlOutput').text(output);
+        });
+
+        function contains(array, temp) {
+            var exists = false;
+            for (let i = 0; i < array.length; i++) {
+                if (array[i] == temp) {
+                    exists = true;
+                    break;
+                }
+            }
+            return exists;
+        }
+    </script>
+</body>
+
+</html>
