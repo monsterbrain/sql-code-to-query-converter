@@ -4,6 +4,8 @@ to queries to check in mysql workbench, removing those double quotes and variabl
 
 ## [Visit Site](https://monsterbrain.github.io/sql-code-to-query-converter/)
 
+## TODO - add a preview or what it does
+
 
 Libraries Used
 - Bulma css
